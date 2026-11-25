@@ -9,11 +9,30 @@ TEXT_PATTERN = re.compile(
     r"<text\b[^>]*>(.*?)</text>", re.IGNORECASE | re.DOTALL
 )
 ID_PATTERN = re.compile(r"<id\b[^>]*>(\d+)</id>", re.IGNORECASE)
+NAMESPACE_PATTERN = re.compile(r"<ns\b[^>]*>(\d+)</ns>", re.IGNORECASE)
 REDIRECT_PATTERN = re.compile(
     r"<redirect\b[^>]*/?>", re.IGNORECASE
 )
 CATEGORY_PATTERN = re.compile(
     r"\[\[\s*(Category:[^\]|#]+)(?:\|[^\]]*)?\]\]",
+    re.IGNORECASE,
+)
+GAME_LEAD_PATTERN = re.compile(
+    r"\b(?:is|was|are|were)\s+(?:a|an)\s+(?:\d{4}\s+)?"
+    r"(?:[\w-]+\s+){0,3}"
+    r"(?:video|computer|mobile|online|browser|arcade|board|"
+    r"role[- ]playing|action[- ]adventure|adventure|strategy|simulation|"
+    r"racing|fighting|puzzle|platform|survival|shooter|educational|"
+    r"casual|tactical|card|tabletop)(?:\s+video)?\s+game\b"
+    r"|\bvideo game series\b",
+    re.IGNORECASE,
+)
+GAME_CATEGORY_PATTERN = re.compile(
+    r"\bCategory:[^;]*\b(?:video|computer|mobile|online|browser|arcade|"
+    r"board|role[- ]playing|action[- ]adventure|adventure|strategy|"
+    r"simulation|racing|fighting|puzzle|platform|survival|shooter|"
+    r"educational|casual|tactical|card|tabletop)\s+games\b"
+    r"|\bCategory:games\s+(?:by|in|set|based)\b",
     re.IGNORECASE,
 )
 
@@ -71,7 +90,14 @@ def first_paragraph(wikitext: str) -> str:
 def parse_page(page_xml: str) -> dict[str, str] | None:
     title_match = TITLE_PATTERN.search(page_xml)
     text_match = TEXT_PATTERN.search(page_xml)
-    if not title_match or not text_match or REDIRECT_PATTERN.search(page_xml):
+    namespace_match = NAMESPACE_PATTERN.search(page_xml)
+    if (
+        not title_match
+        or not text_match
+        or not namespace_match
+        or namespace_match.group(1) != "0"
+        or REDIRECT_PATTERN.search(page_xml)
+    ):
         return None
 
     title = clean_wikitext(title_match.group(1))
@@ -99,3 +125,10 @@ def extract_pages(xml_chunk: str) -> list[dict[str, str]]:
         if page is not None:
             pages.append(page)
     return pages
+
+
+def is_game_article(page: dict[str, str]) -> bool:
+    return bool(
+        GAME_LEAD_PATTERN.search(page["first_paragraph"])
+        or GAME_CATEGORY_PATTERN.search(page["categories"])
+    )

@@ -7,7 +7,7 @@ from pathlib import Path
 
 DATA_DIR = Path("data")
 DOCUMENTS_FILE = DATA_DIR / "documents.tsv"
-WIKI_JOIN_FILE = DATA_DIR / "wiki" / "joined_matches.tsv"
+WIKI_JOIN_FILE = DATA_DIR / "wiki_full_scan" / "matches.tsv"
 DEFAULT_INDEX_DIR = DATA_DIR / "lucene_index"
 
 
@@ -44,9 +44,6 @@ def parse_arguments() -> argparse.Namespace:
 
 def load_wiki_data(path: Path) -> dict[str, dict[str, str]]:
     wiki_by_document: dict[str, dict[str, str]] = {}
-    if not path.exists():
-        return wiki_by_document
-
     with path.open("r", encoding="utf-8", newline="") as file:
         for row in csv.DictReader(file, delimiter="\t"):
             if row.get("match_type") != "confirmed_game_context":
